@@ -1,46 +1,38 @@
+from bs4 import BeautifulSoup
 import requests
-import lxml.html as html
+
+def get_all_post_in_page(soup):
+    posts = soup.find('div', id="main_columns").find_all('article')
+    
+    for post in posts:
+        
+        url_post = post.find('a', class_='article-link').get('href')
+        r = requests.get(url_post)
+        soup = BeautifulSoup(r.text, 'lxml')
+
+        title = soup.find('div', class_='post-title').find('h1', class_='entry-title').text
+        body = soup.find('div', class_='entry-content').text
+        images = soup.find_all('img')
+        datePublished = soup.find('div', class_='post-meta').find('time', class_='entry-date').text
 
 
-def get_all_post_in_page(page):
-    posts = page.xpath('//div[@id="main_columns"]/article')
-    links = posts[0].xpath('//a[@class="article-link"]/@href')
-
-    for url in links:
-        r = requests.get(url)
-        tree = html.fromstring(r.text)
-
-        article = tree.xpath('//article | //article/div')[0]
-
-        title = article.xpath('.//div[@class="post-title"]/h1/text()')[0]
-        body = article.xpath('.//div[contains(@class, "entry-container")]/div[@class="entry-content"]/p/text()')
-        img_headers = article.xpath('.//div[@class="entry-image"]/img/@src')
-        allImgs = article.xpath('.//img/@data-src')
-        datePublished = article.xpath('.//div[@class="post-title"]/div[contains(@class, "post-meta")]/ul/li/time/text()')[0]
-        datetimePublished = article.xpath('.//div[@class="post-title"]/div[contains(@class, "post-meta")]/ul/li/time/@datetime')[0]
-
-
-def next_page(tree):
-    nextPage = tree.xpath('//div[@id="content"]/div[@class="pagination"]/span')[0]
-    try: 
-        return nextPage.getnext().xpath('@href')[0]
-    except AttributeError:
-        raise AttributeError(f'This page is last. Current page - {nextPage.text}.')
-     
+def next_page(soup):
+    return soup.find('div', class_='pagination').find('span').findNextSibling().get('href')
 
 def main():
+    ''' URL = NONE IF PAGES ARE OVER '''
     url = 'https://tproger.ru/'
-    pages = 1
+    pages = 3
 
     for page in range(pages):
         print(f'CURRENT PAGE IS = {page+1}')
 
         r = requests.get(url)
-        tree = html.fromstring(r.text)
+        soup = BeautifulSoup(r.text, 'lxml')
 
-        get_all_post_in_page(tree)
+        get_all_post_in_page(soup)
 
-        url = next_page(tree)
+        url = next_page(soup)
 
 
 if __name__ == '__main__':
